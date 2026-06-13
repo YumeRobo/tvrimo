@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>夢幻リモコン - ブログデモ版</title>
+    <style>
+        /* 全体のレイアウト（ブログ埋め込み iframe 対応） */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #121214;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            min-height: 100vh;
+            margin: 0;
+            padding: 15px 10px;
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        /* 夢幻リモコン タイトル */
+        .app-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #00cae3;
+            margin: 0 0 12px 0;
+            letter-spacing: 3px;
+            text-shadow: 0 0 10px rgba(0,202,227,0.3);
+        }
+
+        /* 疑似テレビ画面 */
+        #tv-screen {
+            width: 100%;
+            max-width: 280px;
+            height: 95px;
+            background-color: #050505;
+            border: 3px solid #2a2a2e;
+            border-radius: 10px;
+            margin-bottom: 12px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.9);
+            box-sizing: border-box;
+        }
+        #tv-screen.on {
+            background-color: #152230;
+            border-color: #3a4a5a;
+        }
+        #brand-indicator {
+            position: absolute;
+            top: 6px;
+            left: 10px;
+            font-size: 10px;
+            color: #777;
+        }
+        #input-indicator {
+            position: absolute;
+            top: 6px;
+            right: 25px;
+            font-size: 10px;
+            color: #ff9500;
+            font-weight: bold;
+        }
+        #screen-text {
+            font-size: 16px;
+            font-weight: bold;
+            color: #4cd964;
+            text-align: center;
+            padding: 0 5px;
+        }
+        #status-display {
+            font-size: 11px;
+            color: #007aff;
+            margin-top: 4px;
+            height: 14px; /* 高さを固定してガタつきを防止 */
+        }
+        #signal-led {
+            position: absolute;
+            top: 8px;
+            right: 10px;
+            width: 6px;
+            height: 6px;
+            background-color: #222;
+            border-radius: 50%;
+        }
+        #signal-led.flash {
+            background-color: #ff3b30;
+            box-shadow: 0 0 6px #ff3b30;
+        }
+
+        /* 設定エリア（メーカー選択） */
+        .config-panel {
+            width: 100%;
+            max-width: 280px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #222426;
+            padding: 6px 10px;
+            border-radius: 6px;
+            box-sizing: border-box;
+        }
+        .config-panel label {
+            font-size: 11px;
+            color: #aaa;
+        }
+        .config-panel select {
+            background: #333;
+            color: #fff;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        /* リモコン本体（横幅を280pxに固定） */
+        .remote-control {
+            width: 100%;
+            max-width: 280px;
+            background-color: #1e2022;
+            border-radius: 24px;
+            padding: 15px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        /* 最上段（電源・入力切替） */
+        .row-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .btn-input {
+            background-color: #333;
+            color: #fff;
+            font-size: 11px;
+            padding: 8px 12px;
+            border-radius: 15px;
+        }
+        .btn-power {
+            background-color: #e53935;
+            color: white;
+            border-radius: 50%;
+            width: 44px;
+            height: 44px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        /* 十字キー・メニューエリア */
+        .dpad-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 6px;
+            background-color: #161719;
+            padding: 8px;
+            border-radius: 16px;
+        }
+        .btn-dpad {
+            background-color: #2a2d30;
+            padding: 10px 0;
+            font-size: 14px;
+        }
+        .btn-center {
+            background-color: #00cae3;
+            color: #000;
+        }
+        .menu-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 6px;
+        }
+        .btn-sub {
+            font-size: 11px;
+            padding: 6px 0;
+            background-color: #2d3033;
+            width: 32%;
+            color: #ccc;
+        }
+
+        /* 数字キー（コンパクトなグリッド） */
+        .numeric-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+        .btn-num {
+            padding: 10px 0;
+            font-size: 16px;
+            background-color: #2d3033;
+            border-radius: 8px;
+        }
+
+        /* 音量・選局・消音 */
+        .control-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+        }
+        .vol-ch-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #161719;
+            padding: 6px;
+            border-radius: 14px;
+            width: 38%;
+        }
+        .center-utility {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            width: 20%;
+        }
+        .btn-mute {
+            background-color: #424242;
+            font-size: 11px;
+            padding: 12px 0;
+            border-radius: 8px;
+        }
+        .btn-label {
+            font-size: 10px;
+            color: #666;
+            margin-bottom: 4px;
+            font-weight: bold;
+        }
+        .arrow-btn {
+            width: 100%;
+            padding: 8px 0;
+            background-color: #2a2d30;
+            font-size: 16px;
+        }
+
+        /* ボタンの基本タッチ設定 */
+        button {
+            color: #eaeaea;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            outline: none;
+            transition: background-color 0.05s, transform 0.05s;
+            -webkit-tap-highlight-color: transparent;
+        }
+        button:active {
+            background-color: #4f5357 !important;
+            transform: scale(0.92);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-title">夢幻リモコン</div>
+
+    <div id="tv-screen">
+        <div id="brand-indicator">接続先: 未設定</div>
+        <div id="input-indicator">TV</div>
+        <div id="signal-led"></div>
+        <div id="screen-text">電源: OFF</div>
+        <div id="status-display"></div>
+    </div>
+
+    <div class="config-panel">
+        <label for="brand-select">接続機種設定:</label>
+        <select id="brand-select" onchange="changeBrand()">
+            <option value="Sony_W730E">Sony (KJ-43W730E)</option>
+            <option value="Panasonic">Panasonic (VIERA)</option>
+            <option value="SONY_Gen">SONY (汎用)</option>
+            <option value="SHARP">SHARP (AQUOS)</option>
+            <option value="TOSHIBA">TOSHIBA (REGZA)</option>
+        </select>
+    </div>
+
+    <div class="remote-control">
+        <div class="row-top">
+            <button class="btn-input" onclick="pressButton('input')">入力切替</button>
+            <button class="btn-power" onclick="pressButton('power')">電源</button>
+        </div>
+
+        <div class="menu-row">
+            <button class="btn-sub" onclick="pressButton('menu', 'ホーム')">ホーム</button>
+            <button class="btn-sub" onclick="pressButton('menu', 'メニュー')">メニュー</button>
+            <button class="btn-sub" onclick="pressButton('menu', '戻る')">戻る</button>
+        </div>
+
+        <div class="dpad-container">
+            <div></div>
+            <button class="btn-dpad" onclick="pressButton('dpad', '上')">▲</button>
+            <div></div>
+            <button class="btn-dpad" onclick="pressButton('dpad', '左')">◀</button>
+            <button class="btn-dpad btn-center" onclick="pressButton('dpad', '決定')">決定</button>
+            <button class="btn-dpad" onclick="pressButton('dpad', '右')">▶</button>
+            <div></div>
+            <button class="btn-dpad" onclick="pressButton('dpad', '下')">▼</button>
+            <div></div>
+        </div>
+
+        <div class="numeric-grid">
+            <button class="btn-num" onclick="pressButton('ch', 1)">1</button>
+            <button class="btn-num" onclick="pressButton('ch', 2)">2</button>
+            <button class="btn-num" onclick="pressButton('ch', 3)">3</button>
+            <button class="btn-num" onclick="pressButton('ch', 4)">4</button>
+            <button class="btn-num" onclick="pressButton('ch', 5)">5</button>
+            <button class="btn-num" onclick="pressButton('ch', 6)">6</button>
+            <button class="btn-num" onclick="pressButton('ch', 7)">7</button>
+            <button class="btn-num" onclick="pressButton('ch', 8)">8</button>
+            <button class="btn-num" onclick="pressButton('ch', 9)">9</button>
+            <button class="btn-num" onclick="pressButton('ch', 10)">10</button>
+            <button class="btn-num" onclick="pressButton('ch', 11)">11</button>
+            <button class="btn-num" onclick="pressButton('ch', 12)">12</button>
+        </div>
+
+        <div class="control-row">
+            <div class="vol-ch-container">
+                <span class="btn-label">音量</span>
+                <button class="arrow-btn" onclick="pressButton('vol', 1)">＋</button>
+                <div style="height: 6px;"></div>
+                <button class="arrow-btn" onclick="pressButton('vol', -1)">－</button>
+            </div>
+            <div class="center-utility">
+                <button class="btn-mute" onclick="pressButton('mute')">消音</button>
+            </div>
+            <div class="vol-ch-container">
+                <span class="btn-label">選局</span>
+                <button class="arrow-btn" onclick="pressButton('stepCh', 1)">∧</button>
+                <div style="height: 6px;"></div>
+                <button class="arrow-btn" onclick="pressButton('stepCh', -1)">∨</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // テレビの内部状態
+        const tvState = {
+            brand: "Sony_W730E",
+            isPowerOn: false,
+            currentChannel: 1,
+            volume: 12,
+            isMuted: false,
+            currentInput: "TV", // TV, HDMI1, HDMI2, ビデオ
+            maxVolume: 50,
+            minVolume: 0,
+            preMuteVolume: 12 // 消音解除用保持
+        };
+
+        const inputs = ["TV", "HDMI1", "HDMI2", "ビデオ"];
+
+        // 機種ごとの擬似赤外線信号フォーマット
+        const brandSignals = {
+            Sony_W730E: { protocol: "SONY-SIRC (15bit/20bit)", model: "KJ-43W730E", customCode: "0x114A" },
+            Panasonic: { protocol: "CCAM/MN6014", model: "VIERA-Gen", customCode: "0x3A01" },
+            SONY_Gen: { protocol: "SIRC (12bit)", model: "BRAVIA-Gen", customCode: "0x01" },
+            SHARP: { protocol: "AEHA (48bit)", address: "AQUOS-Gen", customCode: "0x555A" },
+            TOSHIBA: { protocol: "NEC", address: "REGZA-Gen", customCode: "0x02FD" }
+        };
+
+        // DOM要素
+        const tvScreen = document.getElementById('tv-screen');
+        const brandIndicator = document.getElementById('brand-indicator');
+        const inputIndicator = document.getElementById('input-indicator');
+        const signalLed = document.getElementById('signal-led');
+        const screenText = document.getElementById('screen-text');
+        const statusDisplay = document.getElementById('status-display');
+        const brandSelect = document.getElementById('brand-select');
+
+        // メニュー等の一時表示用タイマー保持
+        let alertTimeout = null;
+
+        // ページ読み込み時に保存された設定を復元
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedBrand = localStorage.getItem('mugen_remote_brand');
+            if (savedBrand && brandSignals[savedBrand]) {
+                tvState.brand = savedBrand;
+                brandSelect.value = savedBrand;
+            }
+            updateDisplay();
+        });
+
+        // メーカー（接続機種）変更 ＆ LocalStorageへ自動保存
+        function changeBrand() {
+            tvState.brand = brandSelect.value;
+            localStorage.setItem('mugen_remote_brand', tvState.brand); // 設定の保存
+            flashLed();
+            updateDisplay();
+        }
+
+        // 信号送信エフェクト（LED点滅 ＆ バイブレーション）
+        function flashLed() {
+            signalLed.classList.add('flash');
+            setTimeout(() => signalLed.classList.remove('flash'), 120);
+
+            if (navigator.vibrate) {
+                navigator.vibrate(12); // 12msの短い微振動
+            }
+        }
+
+        // テレビ画面の描画更新
+        function updateDisplay() {
+            // 表示名マッピング
+            const brandName = tvState.brand === "Sony_W730E" ? "Sony (KJ-43W730E)" : tvState.brand;
+            brandIndicator.innerText = `接続先: ${brandName}`;
+            inputIndicator.innerText = tvState.isPowerOn ? tvState.currentInput : "";
+
+            if (!tvState.isPowerOn) {
+                tvScreen.classList.remove('on');
+                screenText.innerText = "電源: OFF";
+                statusDisplay.innerText = "";
+            } else {
+                tvScreen.classList.add('on');
+                
+                // 入力がTVの時だけチャンネルを表示、それ以外は入力ソース表示
+                if (tvState.currentInput === "TV") {
+                    screenText.innerText = `${tvState.currentChannel} チャンネル`;
+                } else {
+                    screenText.innerText = `${tvState.currentInput} 画面`;
+                }
+
+                // 音量・消音状態の表示
+                if (tvState.isMuted) {
+                    statusDisplay.innerText = "音量: 🔇 消音中";
+                } else {
+                    statusDisplay.innerText = `音量: ${tvState.volume}`;
+                }
+            }
+        }
+
+        // ブログ用の疑似アラート関数（画面表示シミュレーション）
+        function showScreenAlert(message, duration = 2500) {
+            if (alertTimeout) clearTimeout(alertTimeout);
+            
+            // 一時的にステータス画面を書き換える
+            statusDisplay.innerText = message;
+            statusDisplay.style.color = "#ff9500"; // 警告・通知用に一時的にオレンジ色に変更
+            
+            alertTimeout = setTimeout(() => {
+                statusDisplay.style.color = "#007aff"; // 元の青色に戻す
+                updateDisplay();
+            }, duration);
+        }
+
+        // リモコンボタン押下時の統合イベントハンドラー
+        function pressButton(action, value = null) {
+            flashLed();
+
+            // デベロッパーツール(F12)のコンソールに送信信号ログをリアルタイム出力
+            const sig = brandSignals[tvState.brand];
+            console.log(`%c[夢幻シグナル送信] 機種: ${sig.model} | プロトコル: ${sig.protocol} | 独自コード: ${sig.customCode} | コマンド: ${action} ${value || ''}`, "color: #00cae3");
+
+            // 電源ボタン
+            if (action === 'power') {
+                tvState.isPowerOn = !tvState.isPowerOn;
+                updateDisplay();
+                return;
+            }
+
+            // 電源OFFのときは以降のコマンドを受け付けない
+            if (!tvState.isPowerOn) return;
+
+            switch (action) {
+                case 'input': // 入力切替
+                    let idx = inputs.indexOf(tvState.currentInput);
+                    idx = (idx + 1) % inputs.length;
+                    tvState.currentInput = inputs[idx];
+                    updateDisplay();
+                    break;
+
+                case 'ch': // チャンネル直接選択
+                    tvState.currentInput = "TV"; // チャンネルが押されたら自動でTV入力に戻る
+                    tvState.currentChannel = value;
+                    updateDisplay();
+                    break;
+
+                case 'stepCh': // チャンネル上下
+                    tvState.currentInput = "TV";
+                    let nextCh = tvState.currentChannel + value;
+                    if (nextCh > 12) nextCh = 1;
+                    if (nextCh < 1) nextCh = 12;
+                    tvState.currentChannel = nextCh;
+                    updateDisplay();
+                    break;
+
+                case 'vol': // 音量
+                    if (tvState.isMuted) {
+                        tvState.isMuted = false; // 音量を操作したら消音自動解除
+                    }
+                    let nextVol = tvState.volume + value;
+                    if (nextVol >= tvState.minVolume && nextVol <= tvState.maxVolume) {
+                        tvState.volume = nextVol;
+                    }
+                    updateDisplay();
+                    break;
+
+                case 'mute': // 消音
+                    if (tvState.isMuted) {
+                        tvState.volume = tvState.preMuteVolume;
+                        tvState.isMuted = false;
+                    } else {
+                        tvState.preMuteVolume = tvState.volume;
+                        tvState.isMuted = true;
+                    }
+                    updateDisplay();
+                    break;
+
+                case 'menu': // メニュー系操作（ブログ用に画面内通知に変更）
+                    showScreenAlert(`「${value}」を開きました`);
+                    break;
+
+                case 'dpad': // 十字キー操作
+                    showScreenAlert(`十字キー: ${value}`);
+                    break;
+            }
+        }
+    </script>
+</body>
+</html>
