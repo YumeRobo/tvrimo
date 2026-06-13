@@ -244,7 +244,7 @@
             font-size: 16px;
         }
 
-        /* ボタンの基本タッチ設定 */
+        /* ボタンの基本設定（連打時の拡大ズーム防止を追加） */
         button {
             color: #eaeaea;
             border: none;
@@ -254,6 +254,7 @@
             outline: none;
             transition: background-color 0.05s, transform 0.05s;
             -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation; /* 連打時のブラウザズームを防止 */
         }
         button:active {
             background-color: #4f5357 !important;
@@ -358,13 +359,13 @@
 
         const inputs = ["TV", "HDMI1", "HDMI2", "ビデオ"];
 
-        // 機種ごとの擬似赤外線信号フォーマット
+        // 機種ごとの擬似赤外線信号フォーマット（プロパティ名を「model」に完全統一）
         const brandSignals = {
             Sony_W730E: { protocol: "SONY-SIRC (15bit/20bit)", model: "KJ-43W730E", customCode: "0x114A" },
             Panasonic: { protocol: "CCAM/MN6014", model: "VIERA-Gen", customCode: "0x3A01" },
             SONY_Gen: { protocol: "SIRC (12bit)", model: "BRAVIA-Gen", customCode: "0x01" },
-            SHARP: { protocol: "AEHA (48bit)", address: "AQUOS-Gen", customCode: "0x555A" },
-            TOSHIBA: { protocol: "NEC", address: "REGZA-Gen", customCode: "0x02FD" }
+            SHARP: { protocol: "AEHA (48bit)", model: "AQUOS-Gen", customCode: "0x555A" },
+            TOSHIBA: { protocol: "NEC", model: "REGZA-Gen", customCode: "0x02FD" }
         };
 
         // DOM要素
@@ -443,7 +444,7 @@
             
             // 一時的にステータス画面を書き換える
             statusDisplay.innerText = message;
-            statusDisplay.style.color = "#ff9500"; // 警告・通知用に一時的にオレンジ色に変更
+            statusDisplay.style.color = "#ff9500"; // 一時的にオレンジ色に変更
             
             alertTimeout = setTimeout(() => {
                 statusDisplay.style.color = "#007aff"; // 元の青色に戻す
