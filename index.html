@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>夢幻リモコン - ブログ極小エンタメ版</title>
+    <title>夢幻赤外線リモコン</title>
     <style>
         /* ブログ埋め込み iframe に特化した超コンパクトレイアウト */
         body {
@@ -291,8 +291,8 @@
     <div class="config-panel">
         <label for="brand-select">機種設定:</label>
         <select id="brand-select" onchange="changeBrand()">
+            <option value="IRIS_OHYAMA">アイリスオーヤマ (LT-32WSX-F1)</option>
             <option value="SHARP">SHARP (AQUOS)</option>
-            <option value="LT_32WSX_F1">シャープ (LT-32WSX-F1)</option>
             <option value="Sony_W730E">Sony (KJ-43W730E)</option>
             <option value="Panasonic">Panasonic (VIERA)</option>
             <option value="TOSHIBA">TOSHIBA (REGZA)</option>
@@ -323,7 +323,7 @@
             <button class="btn-num" onclick="pressButton('ch', 5)">5</button>
             <button class="btn-num" onclick="pressButton('ch', 6)">6</button>
             <button class="btn-num" onclick="pressButton('ch', 7)">7</button>
-            <button class="btn-num" onclick="pressButton('ch', 8) || 8">8</button>
+            <button class="btn-num" onclick="pressButton('ch', 8)">8</button>
             <button class="btn-num" onclick="pressButton('ch', 9)">9</button>
             <button class="btn-num" onclick="pressButton('ch', 10)">10</button>
             <button class="btn-num" onclick="pressButton('ch', 11)">11</button>
@@ -347,7 +347,7 @@
 
     <script>
         const tvState = {
-            brand: "SHARP",
+            brand: "IRIS_OHYAMA",
             isPowerOn: false,
             currentChannel: 1,
             volume: 12,
@@ -360,10 +360,10 @@
 
         const inputs = ["TV", "HDMI1", "HDMI2", "ビデオ"];
 
-        // 追加・修正した赤外線信号シミュレートデータ
+        // 国内主要メーカー ＆ アイリスオーヤマの赤外線擬似データ
         const brandSignals = {
+            IRIS_OHYAMA: { protocol: "NEC (標準)", model: "LT-32WSX-F1", customCode: "0x61A0", data: "0x40BF" }, // アイリスオーヤマ LUCA
             SHARP: { protocol: "AEHA (48bit)", model: "AQUOS-汎用", customCode: "0x555A", data: "0x2181" },
-            LT_32WSX_F1: { protocol: "AEHA (拡張)", model: "LT-32WSX-F1", customCode: "0x544D", data: "0xAA12" }, // 伝説の有機ELモニター仕様
             Sony_W730E: { protocol: "SONY-SIRC (15bit)", model: "KJ-43W730E", customCode: "0x114A", data: "0x00A5" },
             Panasonic: { protocol: "CCAM/MN6014", model: "VIERA-Gen", customCode: "0x3A01", data: "0x10BC" },
             TOSHIBA: { protocol: "NEC", model: "REGZA-Gen", customCode: "0x02FD", data: "0x40BF" }
@@ -402,11 +402,11 @@
             if (navigator.vibrate) navigator.vibrate(10);
         }
 
-        // ボタンを押すごとに、100種類以上のAI生成アートや人物などの画像をランダム取得して飽きさせない
+        // 毎回「違う絵」や「人物」が1000種類以上の中からランダム表示され、読者を飽きさせない
         function updateRandomImage() {
             if (tvState.isPowerOn) {
-                // キャッシュを回避するため、ミリ秒タイムスタンプを付与して毎回確実に違う画像を表示
                 const randomId = Math.floor(Math.random() * 1000);
+                // 画像枠(80x90)に最適化したランダム画像を取得
                 imageBox.style.backgroundImage = `url('https://picsum.photos/80/90?random=${randomId}')`;
             } else {
                 imageBox.style.backgroundImage = 'none';
@@ -452,7 +452,7 @@
         function pressButton(action, value = null) {
             flashLed();
             
-            // 毎回違う画像を表示するギミックを起動
+            // ボタンが押されるたびに画面枠の画像を毎回切り替えるギミック
             if (tvState.isPowerOn || action === 'power') {
                 updateRandomImage();
             }
